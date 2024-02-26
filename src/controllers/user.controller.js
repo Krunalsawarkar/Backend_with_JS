@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError, apiError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { apiResponse } from "../utils/apiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   //get user details from frontend
@@ -57,9 +58,13 @@ const registerUser = asyncHandler(async (req, res) => {
     "-password -refreshToken"
   );
 
+  if (!createdUser) {
+    throw new apiError(500, "Something Went Wrong While Registering User.");
+  }
 
-  
-
+  return res
+    .status(201)
+    .json(new apiResponse(200, createdUser, "User Registered Sucessfully"));
 });
 
 export { registerUser };
