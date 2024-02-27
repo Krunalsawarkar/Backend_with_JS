@@ -1,1 +1,1 @@
-export const DB_NAME = "JsBackend";
+export const DB_NAME = "KRUNAL";
