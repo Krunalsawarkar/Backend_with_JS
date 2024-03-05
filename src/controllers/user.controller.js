@@ -207,4 +207,59 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPass, newPass } = req.body;
+  const user = await User.findById(req.user?._id);
+  const isPassCorrect = await user.isPasswordCorrect(oldPass);
+
+  if (!isPassCorrect) {
+    throw new apiError(401, "Invalid Password!!");
+  }
+
+  user.password = newPass;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, {}, "Password Chnaged Successfully!"));
+});
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(200, req.user, "Current User Fetched Succssfully!!");
+});
+
+const updateAccDetails = asyncHandler(async (req, res) => {
+  const { fullname, email } = req.body;
+  if (!(fullname || email)) {
+    throw new apiError(400, "All fields are Required");
+  }
+
+  const user = User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullname,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new apiResponse(200, user, "Account Details Updated Successfully!!"));
+});
+
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccDetails,
+};
