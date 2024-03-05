@@ -3,6 +3,7 @@ import { apiError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -90,7 +91,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const { email, username, password } = req.body;
 
   //validate username or password
-   if (!(username || email)) {
+  if (!(username || email)) {
     throw new apiError(400, "Username and Email is required!!");
   }
 
@@ -159,4 +160,51 @@ const logoutUser = asyncHandler(async (req, res) => {
     .json(new apiResponse(200, {}, "User Logged Out!!"));
 });
 
-export { registerUser, loginUser, logoutUser };
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const reqRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+  if (!reqRefreshToken) {
+    throw new apiError(401, "Unauthorized Request");
+  }
+
+  try {
+    const decodeToken = jwt.verify(
+      reqRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById(decodeToken?._id);
+
+    if (!user) {
+      throw new apiError(401, "Invalid Refresh Token");
+    }
+
+    if (reqRefreshToken !== user?.refreshToken) {
+      throw new apiError(401, "Refresh Token Expired!!");
+    }
+
+    const option = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    const { accessToken, NewRefreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, option)
+      .cookie("refreshToken", NewRefreshToken, option)
+      .json(
+        new apiResponse(
+          200,
+          { accessToken, refreshToken: NewRefreshToken },
+          "Access Token Refreshed!!"
+        )
+      );
+  } catch (error) {
+    throw new apiError(401, errpr?.message || "Invalid Refresh Token");
+  }
+});
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken };
